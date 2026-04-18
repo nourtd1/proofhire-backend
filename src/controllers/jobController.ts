@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import Job, { IJob } from '../models/Job';
 
 type SuccessResponse<T> = { success: true; data: T };
@@ -55,6 +56,11 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
 // Returns a single job by MongoDB ObjectId
 export const getJobById = async (req: Request, res: Response): Promise<void> => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      const payload: ErrorResponse = { success: false, message: 'Invalid job id' };
+      res.status(400).json(payload);
+      return;
+    }
     const job: IJob | null = await Job.findById(req.params.id);
     if (!job) {
       const payload: ErrorResponse = { success: false, message: 'Job not found' };
@@ -73,6 +79,11 @@ export const getJobById = async (req: Request, res: Response): Promise<void> => 
 // Deletes a job by MongoDB ObjectId
 export const deleteJob = async (req: Request, res: Response): Promise<void> => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      const payload: ErrorResponse = { success: false, message: 'Invalid job id' };
+      res.status(400).json(payload);
+      return;
+    }
     const deleted: IJob | null = await Job.findByIdAndDelete(req.params.id);
     if (!deleted) {
       const payload: ErrorResponse = { success: false, message: 'Job not found' };

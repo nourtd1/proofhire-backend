@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import Job from '../models/Job';
 import Applicant from '../models/Applicant';
 import ScreeningResult, { IScreeningResult } from '../models/ScreeningResult';
@@ -19,6 +20,11 @@ export const runScreening = async (req: Request, res: Response): Promise<void> =
     const jobId = (req.body as { jobId?: unknown }).jobId;
     if (typeof jobId !== 'string' || jobId.trim().length === 0) {
       const payload: ErrorResponse = { success: false, message: 'jobId is required' };
+      res.status(400).json(payload);
+      return;
+    }
+    if (!mongoose.isValidObjectId(jobId)) {
+      const payload: ErrorResponse = { success: false, message: 'Invalid jobId' };
       res.status(400).json(payload);
       return;
     }
@@ -88,6 +94,11 @@ export const runScreening = async (req: Request, res: Response): Promise<void> =
 export const getScreeningResults = async (req: Request, res: Response): Promise<void> => {
   try {
     const { jobId } = req.params;
+    if (!mongoose.isValidObjectId(jobId)) {
+      const payload: ErrorResponse = { success: false, message: 'Invalid jobId' };
+      res.status(400).json(payload);
+      return;
+    }
 
     const results: IScreeningResult[] = await ScreeningResult.find({ jobId })
       .populate('applicantId')

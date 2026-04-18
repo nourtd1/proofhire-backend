@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import Applicant, { IApplicant } from '../models/Applicant';
 import type { TalentProfile } from '../types/profile';
 import csv from 'csv-parser';
@@ -24,6 +25,11 @@ const splitSkillNames = (skills: string): string[] =>
 // Returns all applicants for a specific jobId
 export const getApplicantsByJob = async (req: Request, res: Response): Promise<void> => {
   try {
+    if (!mongoose.isValidObjectId(req.params.jobId)) {
+      const payload: ErrorResponse = { success: false, message: 'Invalid job id' };
+      res.status(400).json(payload);
+      return;
+    }
     const applicants: IApplicant[] = await Applicant.find({ jobId: req.params.jobId });
     const payload: ApplicantsByJobResponse = {
       success: true,
