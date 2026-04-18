@@ -14,19 +14,32 @@ dotenv.config()
 const app = express()
 const PORT = process.env.PORT || 5000
 
-// CORS: autoriser le frontend Vercel + localhost en dev
+/** Compare les origins sans slash final (évite les rejets si FRONTEND_URL a un `/` en trop). */
+const normalizeOrigin = (value: string): string => value.trim().replace(/\/$/, '')
+
+// CORS: localhost + une ou plusieurs URLs (FRONTEND_URL peut être liste séparée par des virgules)
 const allowedOrigins = [
   'http://localhost:3000',
-  process.env.FRONTEND_URL || '', // URL Vercel (à ajouter après déploiement)
-].filter(Boolean)
+  'http://127.0.0.1:3000',
+  ...(process.env.FRONTEND_URL || '')
+    .split(',')
+    .map((s) => normalizeOrigin(s))
+    .filter(Boolean),
+]
+
+const isAllowedOrigin = (origin: string | undefined): boolean => {
+  if (!origin) return true
+  const n = normalizeOrigin(origin)
+  return allowedOrigins.some((o) => o === n || o === origin)
+}
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Autoriser les requêtes sans origin (Postman, curl) et les origins autorisées
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (isAllowedOrigin(origin)) {
         callback(null, true)
       } else {
+        console.error('[CORS] Blocked origin:', origin, '| allowed:', allowedOrigins)
         callback(new Error(`CORS: origin ${origin} not allowed`))
       }
     },
