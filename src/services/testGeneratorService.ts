@@ -14,9 +14,10 @@ export async function generateTestQuestions(
     throw new Error('GEMINI_API_KEY is missing. Please set it in your environment.')
   }
 
+  const modelId = (process.env.GEMINI_MODEL || 'gemini-2.0-flash').trim()
   const genAI = new GoogleGenerativeAI(apiKey)
   const model = genAI.getGenerativeModel({
-    model: 'gemini-1.5-flash',
+    model: modelId,
     systemInstruction: `You are a technical assessment expert for Umurava, an African tech talent platform.
 Your job is to create fair, practical, and relevant technical questions to verify 
 a developer's claimed skills.

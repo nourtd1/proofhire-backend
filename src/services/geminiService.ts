@@ -24,9 +24,12 @@ if (!apiKey) {
   throw new Error('GEMINI_API_KEY is missing. Please set it in your environment.');
 }
 
+/** Voir https://ai.google.dev/gemini-api/docs/models — `gemini-1.5-flash` n’est plus exposé sur v1beta pour certains comptes. */
+const GEMINI_MODEL = (process.env.GEMINI_MODEL || 'gemini-2.0-flash').trim();
+
 const genAI = new GoogleGenerativeAI(apiKey);
 const model = genAI.getGenerativeModel({
-  model: 'gemini-1.5-flash',
+  model: GEMINI_MODEL,
   systemInstruction: `You are an expert AI recruiter assistant for Umurava, Africa's leading tech talent platform.
 Your mission is to fairly evaluate candidates for technical roles with deep understanding 
 of the African tech ecosystem and its unique context.
