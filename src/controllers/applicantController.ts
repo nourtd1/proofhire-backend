@@ -43,6 +43,32 @@ export const getApplicantsByJob = async (req: Request, res: Response): Promise<v
   }
 };
 
+// GET /api/applicants/detail/:applicantId
+// Returns one applicant by id
+export const getApplicantById = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const applicantId = req.params.applicantId;
+    if (!mongoose.isValidObjectId(applicantId)) {
+      const payload: ErrorResponse = { success: false, message: 'Invalid applicant id' };
+      res.status(400).json(payload);
+      return;
+    }
+
+    const applicant = await Applicant.findById(applicantId);
+    if (!applicant) {
+      const payload: ErrorResponse = { success: false, message: 'Applicant not found' };
+      res.status(404).json(payload);
+      return;
+    }
+
+    const payload: SuccessResponse<IApplicant> = { success: true, data: applicant };
+    res.json(payload);
+  } catch (err: unknown) {
+    const payload: ErrorResponse = { success: false, message: getErrorMessage(err) };
+    res.status(500).json(payload);
+  }
+};
+
 // POST /api/applicants/profile
 // Body: { jobId: string, profile: TalentProfile }
 // Ingests one structured JSON profile
@@ -181,8 +207,3 @@ export const ingestCSV = async (req: Request, res: Response): Promise<void> => {
 // Back-compat exports (older routes referenced these)
 export const getApplicants = getApplicantsByJob;
 export const createApplicant = ingestProfile;
-
-export const getApplicantById = async (req: Request, res: Response): Promise<void> => {
-  const payload: ErrorResponse = { success: false, message: 'Not implemented' };
-  res.status(501).json(payload);
-};

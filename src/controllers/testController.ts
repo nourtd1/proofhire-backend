@@ -4,6 +4,8 @@ import MiniTest, { MiniTestDocument, TestQuestion } from '../models/MiniTest'
 import Applicant from '../models/Applicant'
 import Job from '../models/Job'
 import { generateTestQuestions } from '../services/testGeneratorService'
+import { isAIServiceError } from '../services/aiErrorUtils'
+import { generateFallbackTestQuestions } from '../services/fallbackTestGeneratorService'
 import type { SkillType } from '../types/profile'
 
 type ApiSuccess<T> = { success: true; data: T; message?: string }
@@ -68,7 +70,19 @@ export const generateTest = async (req: Request, res: Response): Promise<void> =
     const candidateName = `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim() || 'Candidate'
     const skills = Array.isArray(profile.skills) ? profile.skills : []
 
-    const { questionsForCandidate, questionsWithAnswers } = await generateTestQuestions(candidateName, skills, job.title)
+    let generatedMessage = 'Test generated successfully'
+    let questionsForCandidate: CandidateQuestion[]
+    let questionsWithAnswers: TestQuestion[]
+
+    try {
+      ;({ questionsForCandidate, questionsWithAnswers } = await generateTestQuestions(candidateName, skills, job.title))
+    } catch (err: unknown) {
+      if (!isAIServiceError(err)) throw err
+
+      console.warn(`[Test] Gemini unavailable (${err.code}). Falling back to local question generation.`)
+      ;({ questionsForCandidate, questionsWithAnswers } = generateFallbackTestQuestions(candidateName, skills, job.title))
+      generatedMessage = `Test generated with backup questions. ${err.userMessage}`
+    }
 
     const test = new MiniTest({
       applicantId: new mongoose.Types.ObjectId(applicantId),
@@ -84,11 +98,14 @@ export const generateTest = async (req: Request, res: Response): Promise<void> =
     const payload: ApiSuccess<{ testId: string; questions: CandidateQuestion[] }> = {
       success: true,
       data: { testId: test._id.toString(), questions: questionsForCandidate },
-      message: 'Test generated successfully',
+      message: generatedMessage,
     }
     res.status(201).json(payload)
   } catch (err: unknown) {
-    const payload: ApiError = { success: false, message: getErrorMessage(err) }
+    const payload: ApiError = {
+      success: false,
+      message: isAIServiceError(err) ? err.userMessage : getErrorMessage(err),
+    }
     res.status(500).json(payload)
   }
 }
@@ -316,4 +333,3 @@ export const getTestByApplicant = async (req: Request, res: Response): Promise<v
     res.status(500).json(payload)
   }
 }
-

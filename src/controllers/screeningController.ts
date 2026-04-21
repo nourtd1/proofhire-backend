@@ -4,6 +4,8 @@ import Job from '../models/Job';
 import Applicant from '../models/Applicant';
 import ScreeningResult, { IScreeningResult } from '../models/ScreeningResult';
 import { screenApplicants } from '../services/geminiService';
+import { isAIServiceError } from '../services/aiErrorUtils';
+import { screenApplicantsWithFallback } from '../services/fallbackScreeningService';
 import type { ApplicantType, JobType, SingleScreeningResult as ServiceResult } from '../types/profile';
 
 type ErrorResponse = { success: false; message: string };
@@ -53,12 +55,25 @@ export const runScreening = async (req: Request, res: Response): Promise<void> =
       `[Screening] Starting AI screening for job: ${jobDoc.title} with ${applicantsDoc.length} applicants`
     );
 
-    const results: ServiceResult[] = await screenApplicants(job, applicants);
+    let results: ServiceResult[];
+    let completionMessage = 'Screening completed';
 
-    for (const result of results) {
-      await ScreeningResult.deleteMany({ jobId, applicantId: result.applicantId });
+    try {
+      results = await screenApplicants(job, applicants);
+    } catch (err: unknown) {
+      if (!isAIServiceError(err)) throw err;
 
-      const doc = new ScreeningResult({
+      console.warn(
+        `[Screening] Gemini unavailable (${err.code}). Falling back to deterministic scoring.`
+      );
+      results = screenApplicantsWithFallback(job, applicants, err.code);
+      completionMessage = `Screening completed using backup scoring. ${err.userMessage}`;
+    }
+
+    await ScreeningResult.deleteMany({ jobId });
+
+    await ScreeningResult.insertMany(
+      results.map((result) => ({
         jobId,
         applicantId: result.applicantId,
         matchScore: result.matchScore,
@@ -67,23 +82,24 @@ export const runScreening = async (req: Request, res: Response): Promise<void> =
         recommendation: result.recommendation,
         reasoning: result.reasoning,
         rank: result.rank,
-      });
-      await doc.save();
-    }
+      }))
+    );
 
-    const sorted = results.slice().sort((a, b) => a.rank - b.rank);
-    console.log(`[Screening] Completed. Saved ${sorted.length} screening results.`);
+    const populatedResults: IScreeningResult[] = await ScreeningResult.find({ jobId })
+      .populate('applicantId')
+      .sort({ rank: 1 });
+    console.log(`[Screening] Completed. Saved ${populatedResults.length} screening results.`);
 
-    const payload: SuccessResponse<ServiceResult[]> = {
+    const payload: SuccessResponse<IScreeningResult[]> = {
       success: true,
-      message: 'Screening completed',
-      data: sorted,
-      count: sorted.length,
+      message: completionMessage,
+      data: populatedResults,
+      count: populatedResults.length,
     };
     res.status(200).json(payload);
   } catch (err: unknown) {
     console.error('[Screening Error]', err);
-    const message = getErrorMessage(err) || 'Screening failed';
+    const message = isAIServiceError(err) ? err.userMessage : getErrorMessage(err) || 'Screening failed';
     const payload: ErrorResponse = { success: false, message };
     res.status(500).json(payload);
   }
