@@ -2,7 +2,7 @@ import { SchemaType, type Schema } from '@google/generative-ai'
 import type { SkillType } from '../types/profile'
 import type { TestQuestion } from '../models/MiniTest'
 import { normalizeGeminiError } from './aiErrorUtils'
-import { createGeminiClient, GEMINI_MODEL } from './geminiClient'
+import { createGeminiClient, GEMINI_MODEL, generateContentWithRetry } from './geminiClient'
 
 export type CandidateQuestion = Omit<TestQuestion, 'correctAnswer'>
 
@@ -97,7 +97,7 @@ OUTPUT (structured JSON only, no markdown):
   }
 
   try {
-    const response = await model.generateContent({
+    const response = await generateContentWithRetry(model, {
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
     })
     const responseText = response.response.text().trim()

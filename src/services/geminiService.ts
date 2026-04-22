@@ -9,7 +9,7 @@ import type {
   SkillType,
 } from '../types/profile'
 import { normalizeGeminiError } from './aiErrorUtils'
-import { createGeminiClient, GEMINI_MODEL } from './geminiClient'
+import { createGeminiClient, GEMINI_MODEL, generateContentWithRetry } from './geminiClient'
 
 export interface SingleScreeningResult {
   applicantId: string
@@ -219,7 +219,7 @@ export async function screenApplicants(
   const prompt = buildPrompt(job, applicants)
 
   try {
-    const response = await model.generateContent({
+    const response = await generateContentWithRetry(model, {
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
     })
     const responseText = response.response.text().trim()
