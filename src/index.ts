@@ -16,8 +16,9 @@ const PORT = process.env.PORT || 5000
 
 // ─── CORS ────────────────────────────────────────────────────────────────────
 
-/** Removes trailing slash for consistent origin comparison. */
-const normalizeOrigin = (value: string): string => value.trim().replace(/\/$/, '')
+/** Normalizes origin for safer comparisons. */
+const normalizeOrigin = (value: string): string =>
+  value.trim().replace(/\/$/, '').toLowerCase()
 
 /**
  * Base whitelist — always includes the Vercel production frontend.
@@ -37,9 +38,15 @@ const allowedOrigins: string[] = [
     .filter(Boolean),
 ]
 
+const isTrustedVercelOrigin = (origin: string): boolean => {
+  // Allow production + preview deployments for this frontend on Vercel.
+  return /^https:\/\/proofhire-frontend-[a-z0-9-]+\.vercel\.app$/i.test(origin)
+}
+
 const isOriginAllowed = (origin: string | undefined): boolean => {
   if (!origin) return true // allow server-to-server / curl requests
   const normalized = normalizeOrigin(origin)
+  if (isTrustedVercelOrigin(normalized)) return true
   return allowedOrigins.some((allowed) => normalizeOrigin(allowed) === normalized)
 }
 
