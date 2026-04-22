@@ -1,12 +1,12 @@
 import { GoogleGenerativeAI, type GenerateContentRequest, type GenerateContentResult, type GenerativeModel } from '@google/generative-ai'
 import { normalizeGeminiError } from './aiErrorUtils'
 
-export const GEMINI_MODEL = 'gemini-2.0-flash-lite'
+export const GEMINI_MODEL = 'gemini-3-flash-preview'
 
 export const readGeminiApiKey = (): string => {
-  const apiKey = process.env.GOOGLE_API_KEY ?? process.env.GEMINI_API_KEY
+  const apiKey: string | undefined = process.env.GOOGLE_API_KEY ?? process.env.GEMINI_API_KEY
 
-  if (typeof apiKey !== 'string' || apiKey.trim().length === 0) {
+  if (!apiKey || apiKey.trim().length === 0) {
     throw new Error('GOOGLE_API_KEY is missing. Please set it in your environment.')
   }
 
