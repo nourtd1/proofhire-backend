@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, SchemaType, type Schema } from '@google/generative-ai'
+import { SchemaType, type Schema } from '@google/generative-ai'
 import type {
   ApplicantType,
   CertificationType,
@@ -9,6 +9,7 @@ import type {
   SkillType,
 } from '../types/profile'
 import { normalizeGeminiError } from './aiErrorUtils'
+import { createGeminiClient, GEMINI_MODEL } from './geminiClient'
 
 export interface SingleScreeningResult {
   applicantId: string
@@ -19,8 +20,6 @@ export interface SingleScreeningResult {
   reasoning: string
   rank: number
 }
-
-const GEMINI_MODEL = 'gemini-2.0-flash'
 
 const screeningResultItemSchema: Schema = {
   type: SchemaType.OBJECT,
@@ -54,12 +53,7 @@ const screeningResponseSchema: Schema = {
 }
 
 const createGeminiModel = () => {
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY is missing. Please set it in your environment.')
-  }
-
-  const genAI = new GoogleGenerativeAI(apiKey)
+  const genAI = createGeminiClient()
   return genAI.getGenerativeModel({
     model: GEMINI_MODEL,
     generationConfig: {

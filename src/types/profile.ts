@@ -45,7 +45,7 @@ export interface Project {
 
 export interface Availability {
   status: 'Available' | 'Open to Opportunities' | 'Not Available';
-  type: 'Full-time' | 'Part-time' | 'Contract';
+  type: 'Full-time' | 'Part-time' | 'Contract' | 'Remote';
   startDate?: string;
 }
 

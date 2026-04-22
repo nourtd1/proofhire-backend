@@ -211,8 +211,7 @@ export const dummyProfiles: TalentProfile[] = [
     ],
     availability: {
       status: "Open to Opportunities",
-      type: "Remote" as any // Casting since Remote might not be in the strict types if it's 'Contract' | 'Part-time' | 'Full-time' wait let me check type.
-      // type: 'Full-time' | 'Part-time' | 'Contract'
+      type: "Remote"
     }
   },
   // Profile 4: Senior Data Engineer (Lagos)

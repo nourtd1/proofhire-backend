@@ -1,11 +1,10 @@
-import { GoogleGenerativeAI, SchemaType, type Schema } from '@google/generative-ai'
+import { SchemaType, type Schema } from '@google/generative-ai'
 import type { SkillType } from '../types/profile'
 import type { TestQuestion } from '../models/MiniTest'
 import { normalizeGeminiError } from './aiErrorUtils'
+import { createGeminiClient, GEMINI_MODEL } from './geminiClient'
 
 export type CandidateQuestion = Omit<TestQuestion, 'correctAnswer'>
-
-const GEMINI_MODEL = 'gemini-2.0-flash'
 
 const testQuestionItemSchema: Schema = {
   type: SchemaType.OBJECT,
@@ -39,12 +38,7 @@ export async function generateTestQuestions(
   skills: SkillType[],
   jobTitle: string
 ): Promise<{ questionsForCandidate: CandidateQuestion[]; questionsWithAnswers: TestQuestion[] }> {
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY is missing. Please set it in your environment.')
-  }
-
-  const genAI = new GoogleGenerativeAI(apiKey)
+  const genAI = createGeminiClient()
   const model = genAI.getGenerativeModel({
     model: GEMINI_MODEL,
     generationConfig: {
