@@ -1,6 +1,7 @@
 import express from 'express'
 import cors, { type CorsOptions } from 'cors'
 import dotenv from 'dotenv'
+import mongoose from 'mongoose'
 import connectDB from './config/db'
 
 // Routes
@@ -111,6 +112,8 @@ app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'ok',
     message: 'ProofHire API is running',
+    database:
+      mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
     timestamp: new Date().toISOString(),
   })
 })
@@ -136,13 +139,18 @@ app.use(
 
 // Démarrer le serveur
 const startServer = async () => {
-  await connectDB()
   app.listen(PORT, () => {
     console.log(`[ProofHire] Backend running on port ${PORT}`)
     console.log(
       `[ProofHire] Environment: ${process.env.NODE_ENV || 'development'}`
     )
   })
+
+  try {
+    await connectDB()
+  } catch (error) {
+    console.error('[MongoDB] Connection failed:', error)
+  }
 }
 
 startServer()
