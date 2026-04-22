@@ -40,7 +40,9 @@ const allowedOrigins: string[] = [
 
 const isTrustedVercelOrigin = (origin: string): boolean => {
   // Allow production + preview deployments for this frontend on Vercel.
-  return /^https:\/\/proofhire-frontend-[a-z0-9-]+\.vercel\.app$/i.test(origin)
+  return /^https:\/\/proofhire-frontend(?:-[a-z0-9-]+)?\.vercel\.app$/i.test(
+    origin
+  )
 }
 
 const isOriginAllowed = (origin: string | undefined): boolean => {
@@ -64,6 +66,38 @@ const corsOptions: CorsOptions = {
   credentials: true,
   optionsSuccessStatus: 200, // some legacy browsers choke on 204
 }
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin
+
+  if (isOriginAllowed(origin)) {
+    if (origin) {
+      res.header('Access-Control-Allow-Origin', origin)
+      res.header('Vary', 'Origin')
+    }
+
+    res.header('Access-Control-Allow-Credentials', 'true')
+    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
+    res.header(
+      'Access-Control-Allow-Headers',
+      req.headers['access-control-request-headers'] ??
+        'Content-Type, Authorization'
+    )
+  }
+
+  if (req.method === 'OPTIONS') {
+    if (isOriginAllowed(origin)) {
+      return res.sendStatus(200)
+    }
+
+    return res.status(403).json({
+      success: false,
+      message: `CORS policy: origin "${origin}" is not allowed`,
+    })
+  }
+
+  next()
+})
 
 // Handle pre-flight requests for all routes
 app.options('*', cors(corsOptions))
